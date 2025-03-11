@@ -125,10 +125,10 @@ export function PricingSection() {
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
               {/* Pricing Card */}
-              <Card className={`h-full flex flex-col ${plan.popular ? "border-primary shadow-lg" : ""}`}>
+              <Card className={`h-full flex flex-col relative ${plan.popular ? "border-primary shadow-lg" : ""}`}>
                 {/* Popular Plan Badge */}
                 {plan.popular && (
-                  <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2">
+                  <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2 z-10">
                     <span className="bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-md">
                       Most Popular
                     </span>
