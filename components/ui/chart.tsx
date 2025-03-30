@@ -442,3 +442,22 @@ export function ChartTooltip({
   )
 }
 
+export function ResponsiveContainerComponent({
+  children,
+  width = "100%",
+  height = "100%",
+}: {
+  children: React.ReactNode
+  width?: string | number
+  height?: string | number
+}) {
+  return (
+    <div style={{ width, height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        {children}
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+

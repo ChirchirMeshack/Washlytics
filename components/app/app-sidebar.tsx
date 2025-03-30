@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -18,32 +18,14 @@ import {
   Menu,
   X,
   Sparkles,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-interface SidebarLink {
-  title: string
-  href: string
-  icon: any
-  color: string
-  subItems?: Array<{
-    title: string
-    href: string
-  }>
-}
-
-const sidebarLinks: SidebarLink[] = [
+const sidebarLinks = [
   {
     title: "Dashboard",
     href: "/app/dashboard",
@@ -141,13 +123,35 @@ export function AppSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [openCollapsibles, setOpenCollapsibles] = useState<string[]>([])
+  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 0)
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+      // Auto-collapse sidebar on smaller screens
+      if (window.innerWidth < 1024 && !isCollapsed) {
+        setIsCollapsed(true)
+      } else if (window.innerWidth >= 1280 && isCollapsed) {
+        setIsCollapsed(false)
+      }
+    }
+
+    // Set initial state based on window width
+    if (typeof window !== "undefined") {
+      handleResize()
+      window.addEventListener("resize", handleResize)
+      return () => window.removeEventListener("resize", handleResize)
+    }
+  }, [isCollapsed])
+
+  // Close mobile sidebar when navigating
+  useEffect(() => {
+    setIsMobileOpen(false)
+  }, [pathname])
 
   const toggleCollapsible = (title: string) => {
-    setOpenCollapsibles((prev) => 
-      prev.includes(title) 
-        ? prev.filter((item) => item !== title)
-        : [...prev, title]
-    )
+    setOpenCollapsibles((prev) => (prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]))
   }
 
   const isSubItemActive = (subItems: { href: string }[] | undefined) => {
@@ -155,125 +159,172 @@ export function AppSidebar() {
     return subItems.some((item) => pathname === item.href)
   }
 
+  // Auto-expand the section that contains the active page
+  useEffect(() => {
+    const activeParent = sidebarLinks.find(
+      (link) => link.subItems && link.subItems.some((item) => item.href === pathname),
+    )
+
+    if (activeParent && !openCollapsibles.includes(activeParent.title)) {
+      setOpenCollapsibles((prev) => [...prev, activeParent.title])
+    }
+  }, [pathname, openCollapsibles])
+
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile sidebar overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity md:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      {/* Mobile toggle */}
+      {/* Mobile toggle button */}
       <Button
         variant="outline"
         size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
+        className="fixed top-4 left-4 z-50 md:hidden shadow-md hover:shadow-lg transition-all"
         onClick={() => setIsMobileOpen(!isMobileOpen)}
       >
         {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
-      {/* Sidebar container */}
+      {/* Sidebar */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-30 flex flex-col bg-white dark:bg-gray-950 border-r transition-all duration-300 ease-in-out",
           isCollapsed ? "w-[70px]" : "w-[250px]",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          isMobileOpen ? "translate-x-0 shadow-xl" : "-translate-x-full md:translate-x-0 md:shadow-none",
         )}
       >
-        {/* Header */}
+        {/* Sidebar Header */}
         <div className="flex h-16 items-center justify-between px-4 py-4 border-b">
           <div className="flex items-center">
-            <Sparkles className="h-6 w-6 text-primary animate-sparkle" />
-            {!isCollapsed && (
-              <span className="ml-2 font-bold text-lg">Sparkle</span>
-            )}
+            <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+            {!isCollapsed && <span className="ml-2 font-bold text-lg tracking-tight">Sparkle</span>}
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="hidden md:flex"
+            className="hidden md:flex opacity-70 hover:opacity-100"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
-            <Menu className="h-5 w-5" />
+            {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </Button>
         </div>
 
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto py-4">
+        {/* Sidebar Content */}
+        <div className="custom-scrollbar flex-1 overflow-y-auto py-4">
           <nav className="space-y-1 px-2">
             {sidebarLinks.map((link) => (
-              <div key={link.href}>
+              <div key={link.title} className="group">
                 {link.subItems ? (
-                  // Item with subitems
                   <Collapsible
                     open={openCollapsibles.includes(link.title)}
                     onOpenChange={() => toggleCollapsible(link.title)}
+                    className="w-full"
                   >
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          "w-full justify-between",
-                          (pathname === link.href || isSubItemActive(link.subItems)) &&
-                            "bg-secondary"
-                        )}
-                      >
-                        <div className="flex items-center">
-                          <link.icon className={cn("h-5 w-5 mr-2", link.color)} />
-                          {!isCollapsed && <span>{link.title}</span>}
-                        </div>
-                        {!isCollapsed && <ChevronIcon open={openCollapsibles.includes(link.title)} />}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1">
-                      {link.subItems.map((subItem) => (
-                        <Link
-                          key={subItem.href}
-                          href={subItem.href}
-                          className={cn(
-                            "block px-9 py-2 text-sm rounded-md hover:bg-secondary",
-                            pathname === subItem.href && "bg-secondary"
-                          )}
-                        >
-                          {subItem.title}
-                        </Link>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-                ) : (
-                  // Single item
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link href={link.href}>
-                          <Button
-                            variant="ghost"
+                    <div
+                      className={cn(
+                        "flex items-center px-2 py-2 text-sm rounded-md transition-colors",
+                        pathname === link.href || isSubItemActive(link.subItems)
+                          ? "bg-primary/10 text-primary dark:bg-primary/20"
+                          : "hover:bg-muted/80 dark:hover:bg-muted/20",
+                        isCollapsed ? "justify-center" : "",
+                      )}
+                    >
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className={cn("flex items-center", isCollapsed ? "justify-center w-full" : "")}>
+                              <link.icon className={cn("h-5 w-5", link.color)} />
+                              {!isCollapsed && (
+                                <>
+                                  <span className="ml-3 font-medium">{link.title}</span>
+                                  <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 p-0">
+                                      <ChevronIcon open={openCollapsibles.includes(link.title)} />
+                                    </Button>
+                                  </CollapsibleTrigger>
+                                </>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          {isCollapsed && <TooltipContent side="right">{link.title}</TooltipContent>}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    {!isCollapsed && (
+                      <CollapsibleContent className="pl-10 pr-2 space-y-1 mt-1 animate-accordion-down">
+                        {link.subItems.map((subItem) => (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
                             className={cn(
-                              "w-full justify-start",
-                              pathname === link.href && "bg-secondary"
+                              "block px-2 py-1.5 text-sm rounded-md transition-colors",
+                              pathname === subItem.href
+                                ? "bg-primary/10 text-primary font-medium dark:bg-primary/20"
+                                : "text-muted-foreground hover:bg-muted/80 dark:hover:bg-muted/20 hover:text-foreground",
                             )}
                           >
+                            {subItem.title}
+                          </Link>
+                        ))}
+                      </CollapsibleContent>
+                    )}
+                  </Collapsible>
+                ) : (
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "flex items-center px-2 py-2 text-sm rounded-md transition-colors",
+                      pathname === link.href
+                        ? "bg-primary/10 text-primary dark:bg-primary/20"
+                        : "hover:bg-muted/80 dark:hover:bg-muted/20",
+                      isCollapsed ? "justify-center" : "",
+                    )}
+                  >
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className={cn("flex items-center", isCollapsed ? "justify-center w-full" : "")}>
                             <link.icon className={cn("h-5 w-5", link.color)} />
-                            {!isCollapsed && (
-                              <span className="ml-2">{link.title}</span>
-                            )}
-                          </Button>
-                        </Link>
-                      </TooltipTrigger>
-                      {isCollapsed && (
-                        <TooltipContent side="right">
-                          {link.title}
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                            {!isCollapsed && <span className="ml-3 font-medium">{link.title}</span>}
+                          </div>
+                        </TooltipTrigger>
+                        {isCollapsed && <TooltipContent side="right">{link.title}</TooltipContent>}
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Link>
                 )}
               </div>
             ))}
           </nav>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="mt-auto border-t p-4">
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Sparkle v1.2.0</span>
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setIsCollapsed(true)}>
+                Collapse
+              </Button>
+            </div>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 mx-auto" onClick={() => setIsCollapsed(false)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Expand Sidebar</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </aside>
     </>
@@ -298,3 +349,4 @@ function ChevronIcon({ open }: { open: boolean }) {
     </svg>
   )
 }
+
