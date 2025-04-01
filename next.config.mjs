@@ -20,21 +20,17 @@ const nextConfig = {
       minimumCacheTTL: 60,
     },
     
-    // Enable experimental features
+    // Configure experimental features
     experimental: {
-      // Enable server components
-      serverComponents: true,
-      // Enable concurrent features
-      concurrentFeatures: true,
-      // Enable server actions
-      serverActions: true,
-      // Enable optimized bundle splitting
+      // These experimental features are not available in Next.js 15.2.1
+      // serverComponents: true,
+      // concurrentFeatures: true,
+      // serverActions: true,
       optimizeCss: true,
-      // Enable memory optimization
-      optimizeServerReact: true,
+      // optimizeServerReact: true,
     },
     
-    // Configure webpack for performance
+    // Configure webpack for performance - simplified to avoid errors
     webpack: (config, { dev, isServer }) => {
       // Add bundle analyzer in development
       if (dev && !isServer) {
@@ -48,15 +44,7 @@ const nextConfig = {
         );
       }
       
-      // Optimize CSS
-      if (!dev) {
-        config.optimization.splitChunks.cacheGroups.styles = {
-          name: 'styles',
-          test: /\.(css|scss)$/,
-          chunks: 'all',
-          enforce: true,
-        };
-      }
+      // Removed the problematic CSS optimization that was causing the error
       
       return config;
     },
