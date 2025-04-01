@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useEffect, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { Line, Bar, Doughnut, Pie } from "react-chartjs-2"
@@ -15,19 +16,32 @@ import {
   Tooltip,
   Legend,
   type ChartOptions,
+  type ChartData,
+  Filler,
 } from "chart.js"
 
 // Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend)
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+)
 
 // Define chart types
-type ChartType = "line" | "bar" | "doughnut" | "pie"
+type ChartType = "line" | "bar" | "doughnut" | "pie" | "area"
 
 // Define chart props
 interface ChartProps {
   type: ChartType
-  data: any // Chart data
-  options?: ChartOptions<ChartType>
+  data: ChartData<any>
+  options?: ChartOptions<any>
   height?: number
   width?: number
   className?: string
@@ -37,7 +51,7 @@ interface ChartProps {
 export function Chart({ type, data, options, height, width, className }: ChartProps) {
   const { theme } = useTheme()
   const chartRef = useRef<ChartJS>(null)
-  const [chartData, setChartData] = useState<any>(data)
+  const [chartData, setChartData] = useState<ChartData<any>>(data)
 
   // Update chart colors based on theme
   useEffect(() => {
@@ -47,10 +61,23 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
     const updatedData = { ...data }
 
     // Update colors based on chart type
-    if (type === "line" || type === "bar") {
+    if (type === "line" || type === "bar" || type === "area") {
       if (updatedData.datasets) {
         updatedData.datasets = updatedData.datasets.map((dataset: any, index: number) => {
           const colors = getColors(index, isDark)
+
+          // For area charts, add fill and background opacity
+          if (type === "area" && !dataset.fill) {
+            return {
+              ...dataset,
+              borderColor: colors.borderColor,
+              backgroundColor: colors.backgroundColorWithOpacity,
+              hoverBackgroundColor: colors.hoverColorWithOpacity,
+              fill: true,
+              tension: 0.4,
+            }
+          }
+
           return {
             ...dataset,
             borderColor: colors.borderColor,
@@ -75,7 +102,7 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
   }, [data, theme, type])
 
   // Default options based on theme
-  const defaultOptions: ChartOptions<ChartType> = {
+  const defaultOptions: ChartOptions<any> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -117,7 +144,7 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
       },
     },
     scales:
-      type === "line" || type === "bar"
+      type === "line" || type === "bar" || type === "area"
         ? {
             x: {
               grid: {
@@ -179,60 +206,80 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
         light: {
           borderColor: "rgba(59, 130, 246, 0.8)",
           backgroundColor: "rgba(59, 130, 246, 0.2)",
+          backgroundColorWithOpacity: "rgba(59, 130, 246, 0.1)",
           hoverColor: "rgba(59, 130, 246, 0.3)",
+          hoverColorWithOpacity: "rgba(59, 130, 246, 0.2)",
         },
         dark: {
           borderColor: "rgba(96, 165, 250, 0.8)",
           backgroundColor: "rgba(96, 165, 250, 0.2)",
+          backgroundColorWithOpacity: "rgba(96, 165, 250, 0.1)",
           hoverColor: "rgba(96, 165, 250, 0.3)",
+          hoverColorWithOpacity: "rgba(96, 165, 250, 0.2)",
         },
       },
       {
         light: {
           borderColor: "rgba(16, 185, 129, 0.8)",
           backgroundColor: "rgba(16, 185, 129, 0.2)",
+          backgroundColorWithOpacity: "rgba(16, 185, 129, 0.1)",
           hoverColor: "rgba(16, 185, 129, 0.3)",
+          hoverColorWithOpacity: "rgba(16, 185, 129, 0.2)",
         },
         dark: {
           borderColor: "rgba(52, 211, 153, 0.8)",
           backgroundColor: "rgba(52, 211, 153, 0.2)",
+          backgroundColorWithOpacity: "rgba(52, 211, 153, 0.1)",
           hoverColor: "rgba(52, 211, 153, 0.3)",
+          hoverColorWithOpacity: "rgba(52, 211, 153, 0.2)",
         },
       },
       {
         light: {
           borderColor: "rgba(249, 115, 22, 0.8)",
           backgroundColor: "rgba(249, 115, 22, 0.2)",
+          backgroundColorWithOpacity: "rgba(249, 115, 22, 0.1)",
           hoverColor: "rgba(249, 115, 22, 0.3)",
+          hoverColorWithOpacity: "rgba(249, 115, 22, 0.2)",
         },
         dark: {
           borderColor: "rgba(251, 146, 60, 0.8)",
           backgroundColor: "rgba(251, 146, 60, 0.2)",
+          backgroundColorWithOpacity: "rgba(251, 146, 60, 0.1)",
           hoverColor: "rgba(251, 146, 60, 0.3)",
+          hoverColorWithOpacity: "rgba(251, 146, 60, 0.2)",
         },
       },
       {
         light: {
           borderColor: "rgba(217, 70, 239, 0.8)",
           backgroundColor: "rgba(217, 70, 239, 0.2)",
+          backgroundColorWithOpacity: "rgba(217, 70, 239, 0.1)",
           hoverColor: "rgba(217, 70, 239, 0.3)",
+          hoverColorWithOpacity: "rgba(217, 70, 239, 0.2)",
         },
         dark: {
           borderColor: "rgba(232, 121, 249, 0.8)",
           backgroundColor: "rgba(232, 121, 249, 0.2)",
+          backgroundColorWithOpacity: "rgba(232, 121, 249, 0.1)",
           hoverColor: "rgba(232, 121, 249, 0.3)",
+          hoverColorWithOpacity: "rgba(232, 121, 249, 0.2)",
         },
       },
       {
         light: {
           borderColor: "rgba(234, 88, 12, 0.8)",
           backgroundColor: "rgba(234, 88, 12, 0.2)",
+          backgroundColorWithOpacity: "rgba(234, 88, 12, 0.1)",
           hoverColor: "rgba(234, 88, 12, 0.3)",
+          hoverColorWithOpacity: "rgba(234, 88, 12, 0.2)",
         },
         dark: {
           borderColor: "rgba(251, 146, 60, 0.8)",
           backgroundColor: "rgba(251, 146, 60, 0.2)",
+          backgroundColorWithOpacity: "rgba(251, 146, 60, 0.1)",
           hoverColor: "rgba(251, 146, 60, 0.3)",
+          hoverColorWithOpacity: "rgba(251, 146, 60, 0.2)",
         },
       },
     ]
@@ -277,9 +324,10 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
   const renderChart = () => {
     switch (type) {
       case "line":
+      case "area":
         return (
           <Line
-            ref={chartRef as any}
+            ref={chartRef as React.RefObject<ChartJS<"line">>}
             data={chartData}
             options={mergedOptions as ChartOptions<"line">}
             height={height}
@@ -289,7 +337,7 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
       case "bar":
         return (
           <Bar
-            ref={chartRef as any}
+            ref={chartRef as React.RefObject<ChartJS<"bar">>}
             data={chartData}
             options={mergedOptions as ChartOptions<"bar">}
             height={height}
@@ -299,7 +347,7 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
       case "doughnut":
         return (
           <Doughnut
-            ref={chartRef as any}
+            ref={chartRef as React.RefObject<ChartJS<"doughnut">>}
             data={chartData}
             options={mergedOptions as ChartOptions<"doughnut">}
             height={height}
@@ -309,7 +357,7 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
       case "pie":
         return (
           <Pie
-            ref={chartRef as any}
+            ref={chartRef as React.RefObject<ChartJS<"pie">>}
             data={chartData}
             options={mergedOptions as ChartOptions<"pie">}
             height={height}
@@ -334,6 +382,19 @@ export function Chart({ type, data, options, height, width, className }: ChartPr
   )
 }
 
-// Export the Chart component
+// Specialized chart components
+export const LineChart = (props: Omit<ChartProps, "type">) => <Chart type="line" {...props} />
+
+export const BarChart = (props: Omit<ChartProps, "type">) => <Chart type="bar" {...props} />
+
+export const PieChart = (props: Omit<ChartProps, "type">) => <Chart type="pie" {...props} />
+
+export const PieChartComponent = PieChart
+
+export const DoughnutChart = (props: Omit<ChartProps, "type">) => <Chart type="doughnut" {...props} />
+
+export const AreaChart = (props: Omit<ChartProps, "type">) => <Chart type="area" {...props} />
+
+// Export the Chart component as default
 export default Chart
 

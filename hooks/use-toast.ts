@@ -1,46 +1,44 @@
 "use client"
 
-import { toast as toastOriginal, type ToasterToast } from "@/components/ui/use-toast"
+import { useToast as useToastOriginal } from "@/components/ui/use-toast"
+import { toast as toastOriginal } from "@/components/ui/use-toast"
 
-type ToastProps = Omit<ToasterToast, "id">
+export const toast = toastOriginal
 
-// Enhanced toast hook that extends the base functionality
 export function useToast() {
-  // Get the original toast functionality
-  const { toast: originalToast, dismiss, ...rest } = toastOriginal
+  const { toast, dismiss, ...rest } = useToastOriginal()
 
-  // Create enhanced toast variants
-  const success = (props: ToastProps) => {
-    return originalToast({
+  // Enhanced toast variants
+  const success = (props: Parameters<typeof toast>[0]) => {
+    return toast({
       ...props,
       variant: "success",
     })
   }
 
-  const error = (props: ToastProps) => {
-    return originalToast({
+  const error = (props: Parameters<typeof toast>[0]) => {
+    return toast({
       ...props,
       variant: "destructive",
     })
   }
 
-  const warning = (props: ToastProps) => {
-    return originalToast({
+  const warning = (props: Parameters<typeof toast>[0]) => {
+    return toast({
       ...props,
       variant: "warning",
     })
   }
 
-  const info = (props: ToastProps) => {
-    return originalToast({
+  const info = (props: Parameters<typeof toast>[0]) => {
+    return toast({
       ...props,
       variant: "info",
     })
   }
 
-  // Return the enhanced toast functionality
   return {
-    toast: originalToast,
+    toast,
     success,
     error,
     warning,
@@ -50,6 +48,5 @@ export function useToast() {
   }
 }
 
-// Export the toast function directly for convenience
-export const toast = toastOriginal
+export default useToast
 
