@@ -1,31 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    reactStrictMode: true,
+    images: {
+      domains: ['images.unsplash.com', 'plus.unsplash.com'],
+      formats: ['image/avif', 'image/webp'],
+      minimumCacheTTL: 60,
+    },
+    experimental: {
+      optimizeCss: false,
+    },
     eslint: {
       // Warning: This allows production builds to successfully complete even if
       // your project has ESLint errors.
       ignoreDuringBuilds: true,
     },
     typescript: {
-      // Warning: This allows production builds to successfully complete even if
-      // your project has TypeScript errors.
+      // !! WARN !!
+      // Dangerously allow production builds to successfully complete even if
+      // your project has type errors.
+      // !! WARN !!
       ignoreBuildErrors: true,
     },
-    // Enable React strict mode for better development experience
-    reactStrictMode: true,
-    
-    // Enable image optimization
-    images: {
-      domains: ['placeholder.svg', 'images.unsplash.com'],
-      formats: ['image/avif', 'image/webp'],
-      minimumCacheTTL: 60,
-    },
-    
-    // Configure experimental features
-    experimental: {
-      // Disable optimizeCss to avoid the critters dependency issue
-      optimizeCss: false
-    },
-    
     // Configure webpack for performance - simplified to avoid errors
     webpack: (config, { dev, isServer }) => {
       // Add bundle analyzer in development
