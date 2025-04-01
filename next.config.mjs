@@ -22,12 +22,8 @@ const nextConfig = {
     
     // Configure experimental features
     experimental: {
-      // These experimental features are not available in Next.js 15.2.1
-      // serverComponents: true,
-      // concurrentFeatures: true,
-      // serverActions: true,
-      optimizeCss: true,
-      // optimizeServerReact: true,
+      // Disable optimizeCss to avoid the critters dependency issue
+      optimizeCss: false
     },
     
     // Configure webpack for performance - simplified to avoid errors
@@ -43,8 +39,6 @@ const nextConfig = {
           })
         );
       }
-      
-      // Removed the problematic CSS optimization that was causing the error
       
       return config;
     },
