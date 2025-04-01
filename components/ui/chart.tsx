@@ -1,463 +1,339 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { useTheme } from "next-themes"
-import type React from "react"
+import { Line, Bar, Doughnut, Pie } from "react-chartjs-2"
 import {
-  Area,
-  AreaChart as RechartsAreaChart,
-  Bar,
-  BarChart as RechartsBarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart as RechartsLineChart,
-  Pie,
-  PieChart as RechartsPieChart,
-  ResponsiveContainer,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
   Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
+  Legend,
+  type ChartOptions,
+} from "chart.js"
 
-// Types
-type ChartProps = {
-  data: any[]
-  index: string
-  categories: string[]
-  colors?: string[]
-  valueFormatter?: (value: number) => string
-  showLegend?: boolean
-  showXAxis?: boolean
-  showYAxis?: boolean
-  showGridLines?: boolean
-  yAxisWidth?: number
+// Register ChartJS components
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend)
+
+// Define chart types
+type ChartType = "line" | "bar" | "doughnut" | "pie"
+
+// Define chart props
+interface ChartProps {
+  type: ChartType
+  data: any // Chart data
+  options?: ChartOptions<ChartType>
   height?: number
+  width?: number
   className?: string
-  children?: React.ReactNode
 }
 
-type BarChartProps = ChartProps & {
-  layout?: "horizontal" | "vertical"
-  stack?: boolean
-}
+// Main Chart component
+export function Chart({ type, data, options, height, width, className }: ChartProps) {
+  const { theme } = useTheme()
+  const chartRef = useRef<ChartJS>(null)
+  const [chartData, setChartData] = useState<any>(data)
 
-type PieChartProps = {
-  data: any[]
-  category: string
-  index: string
-  colors?: string[]
-  valueFormatter?: (value: number) => string
-  showLegend?: boolean
-  height?: number
-  className?: string
-  children?: React.ReactNode
-}
+  // Update chart colors based on theme
+  useEffect(() => {
+    if (!data) return
 
-// Helper functions
-const getDefaultColors = (theme: string | undefined, count: number) => {
-  const isDark = theme === "dark"
+    const isDark = theme === "dark"
+    const updatedData = { ...data }
 
-  // Base colors for light and dark themes
-  const baseColors = isDark
-    ? ["#3b82f6", "#8b5cf6", "#ec4899", "#10b981", "#f97316", "#f59e0b", "#6366f1"]
-    : ["#2563eb", "#7c3aed", "#db2777", "#059669", "#ea580c", "#d97706", "#4f46e5"]
+    // Update colors based on chart type
+    if (type === "line" || type === "bar") {
+      if (updatedData.datasets) {
+        updatedData.datasets = updatedData.datasets.map((dataset: any, index: number) => {
+          const colors = getColors(index, isDark)
+          return {
+            ...dataset,
+            borderColor: colors.borderColor,
+            backgroundColor: colors.backgroundColor,
+            hoverBackgroundColor: colors.hoverColor,
+          }
+        })
+      }
+    } else if (type === "doughnut" || type === "pie") {
+      if (updatedData.datasets) {
+        updatedData.datasets = updatedData.datasets.map((dataset: any) => {
+          return {
+            ...dataset,
+            backgroundColor: generateColorArray(dataset.data.length, isDark ? 0.7 : 0.5),
+            borderColor: isDark ? "#374151" : "#f3f4f6",
+          }
+        })
+      }
+    }
 
-  // If we have enough colors, return them
-  if (baseColors.length >= count) {
-    return baseColors.slice(0, count)
+    setChartData(updatedData)
+  }, [data, theme, type])
+
+  // Default options based on theme
+  const defaultOptions: ChartOptions<ChartType> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top" as const,
+        labels: {
+          color: theme === "dark" ? "#e5e7eb" : "#374151",
+          font: {
+            family: "'Inter', sans-serif",
+            size: 12,
+          },
+        },
+      },
+      title: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
+        titleColor: theme === "dark" ? "#e5e7eb" : "#111827",
+        bodyColor: theme === "dark" ? "#d1d5db" : "#374151",
+        borderColor: theme === "dark" ? "#374151" : "#e5e7eb",
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: {
+          family: "'Inter', sans-serif",
+          size: 14,
+          weight: "600",
+        },
+        bodyFont: {
+          family: "'Inter', sans-serif",
+          size: 13,
+        },
+        displayColors: true,
+        boxWidth: 10,
+        boxHeight: 10,
+        boxPadding: 3,
+        usePointStyle: true,
+      },
+    },
+    scales:
+      type === "line" || type === "bar"
+        ? {
+            x: {
+              grid: {
+                color: theme === "dark" ? "#374151" : "#e5e7eb",
+                drawBorder: false,
+              },
+              ticks: {
+                color: theme === "dark" ? "#9ca3af" : "#6b7280",
+                font: {
+                  family: "'Inter', sans-serif",
+                  size: 11,
+                },
+              },
+            },
+            y: {
+              grid: {
+                color: theme === "dark" ? "#374151" : "#e5e7eb",
+                drawBorder: false,
+              },
+              ticks: {
+                color: theme === "dark" ? "#9ca3af" : "#6b7280",
+                font: {
+                  family: "'Inter', sans-serif",
+                  size: 11,
+                },
+                callback: (value) => {
+                  // Format large numbers with k, m, b suffixes
+                  if (typeof value === "number") {
+                    if (value >= 1000000000) {
+                      return (value / 1000000000).toFixed(1) + "B"
+                    }
+                    if (value >= 1000000) {
+                      return (value / 1000000).toFixed(1) + "M"
+                    }
+                    if (value >= 1000) {
+                      return (value / 1000).toFixed(1) + "K"
+                    }
+                    return value
+                  }
+                  return value
+                },
+              },
+              beginAtZero: true,
+            },
+          }
+        : undefined,
   }
 
-  // Otherwise, generate additional colors by adding opacity
-  const result = [...baseColors]
-  const opacities = [0.8, 0.6, 0.4]
+  // Merge default options with provided options
+  const mergedOptions = {
+    ...defaultOptions,
+    ...options,
+  }
 
-  let opacityIndex = 0
-  let colorIndex = 0
+  // Helper function to get colors based on index and theme
+  function getColors(index: number, isDark: boolean) {
+    const colorSets = [
+      {
+        light: {
+          borderColor: "rgba(59, 130, 246, 0.8)",
+          backgroundColor: "rgba(59, 130, 246, 0.2)",
+          hoverColor: "rgba(59, 130, 246, 0.3)",
+        },
+        dark: {
+          borderColor: "rgba(96, 165, 250, 0.8)",
+          backgroundColor: "rgba(96, 165, 250, 0.2)",
+          hoverColor: "rgba(96, 165, 250, 0.3)",
+        },
+      },
+      {
+        light: {
+          borderColor: "rgba(16, 185, 129, 0.8)",
+          backgroundColor: "rgba(16, 185, 129, 0.2)",
+          hoverColor: "rgba(16, 185, 129, 0.3)",
+        },
+        dark: {
+          borderColor: "rgba(52, 211, 153, 0.8)",
+          backgroundColor: "rgba(52, 211, 153, 0.2)",
+          hoverColor: "rgba(52, 211, 153, 0.3)",
+        },
+      },
+      {
+        light: {
+          borderColor: "rgba(249, 115, 22, 0.8)",
+          backgroundColor: "rgba(249, 115, 22, 0.2)",
+          hoverColor: "rgba(249, 115, 22, 0.3)",
+        },
+        dark: {
+          borderColor: "rgba(251, 146, 60, 0.8)",
+          backgroundColor: "rgba(251, 146, 60, 0.2)",
+          hoverColor: "rgba(251, 146, 60, 0.3)",
+        },
+      },
+      {
+        light: {
+          borderColor: "rgba(217, 70, 239, 0.8)",
+          backgroundColor: "rgba(217, 70, 239, 0.2)",
+          hoverColor: "rgba(217, 70, 239, 0.3)",
+        },
+        dark: {
+          borderColor: "rgba(232, 121, 249, 0.8)",
+          backgroundColor: "rgba(232, 121, 249, 0.2)",
+          hoverColor: "rgba(232, 121, 249, 0.3)",
+        },
+      },
+      {
+        light: {
+          borderColor: "rgba(234, 88, 12, 0.8)",
+          backgroundColor: "rgba(234, 88, 12, 0.2)",
+          hoverColor: "rgba(234, 88, 12, 0.3)",
+        },
+        dark: {
+          borderColor: "rgba(251, 146, 60, 0.8)",
+          backgroundColor: "rgba(251, 146, 60, 0.2)",
+          hoverColor: "rgba(251, 146, 60, 0.3)",
+        },
+      },
+    ]
 
-  while (result.length < count) {
-    const baseColor = baseColors[colorIndex % baseColors.length]
-    const opacity = opacities[opacityIndex % opacities.length]
+    const colorIndex = index % colorSets.length
+    return isDark ? colorSets[colorIndex].dark : colorSets[colorIndex].light
+  }
 
-    // Convert hex to rgba
-    const r = Number.parseInt(baseColor.slice(1, 3), 16)
-    const g = Number.parseInt(baseColor.slice(3, 5), 16)
-    const b = Number.parseInt(baseColor.slice(5, 7), 16)
+  // Generate an array of colors for pie/doughnut charts
+  function generateColorArray(count: number, opacity = 0.7) {
+    const baseColors = [
+      `rgba(59, 130, 246, ${opacity})`, // Blue
+      `rgba(16, 185, 129, ${opacity})`, // Green
+      `rgba(249, 115, 22, ${opacity})`, // Orange
+      `rgba(217, 70, 239, ${opacity})`, // Purple
+      `rgba(234, 88, 12, ${opacity})`, // Amber
+      `rgba(239, 68, 68, ${opacity})`, // Red
+      `rgba(20, 184, 166, ${opacity})`, // Teal
+      `rgba(168, 85, 247, ${opacity})`, // Violet
+      `rgba(245, 158, 11, ${opacity})`, // Yellow
+      `rgba(6, 182, 212, ${opacity})`, // Cyan
+    ]
 
-    result.push(`rgba(${r}, ${g}, ${b}, ${opacity})`)
+    // If we need more colors than in our base array, generate them
+    if (count <= baseColors.length) {
+      return baseColors.slice(0, count)
+    }
 
-    colorIndex++
-    if (colorIndex % baseColors.length === 0) {
-      opacityIndex++
+    const colors = [...baseColors]
+    for (let i = baseColors.length; i < count; i++) {
+      // Generate random colors for additional items
+      const r = Math.floor(Math.random() * 255)
+      const g = Math.floor(Math.random() * 255)
+      const b = Math.floor(Math.random() * 255)
+      colors.push(`rgba(${r}, ${g}, ${b}, ${opacity})`)
+    }
+
+    return colors
+  }
+
+  // Render the appropriate chart based on type
+  const renderChart = () => {
+    switch (type) {
+      case "line":
+        return (
+          <Line
+            ref={chartRef as any}
+            data={chartData}
+            options={mergedOptions as ChartOptions<"line">}
+            height={height}
+            width={width}
+          />
+        )
+      case "bar":
+        return (
+          <Bar
+            ref={chartRef as any}
+            data={chartData}
+            options={mergedOptions as ChartOptions<"bar">}
+            height={height}
+            width={width}
+          />
+        )
+      case "doughnut":
+        return (
+          <Doughnut
+            ref={chartRef as any}
+            data={chartData}
+            options={mergedOptions as ChartOptions<"doughnut">}
+            height={height}
+            width={width}
+          />
+        )
+      case "pie":
+        return (
+          <Pie
+            ref={chartRef as any}
+            data={chartData}
+            options={mergedOptions as ChartOptions<"pie">}
+            height={height}
+            width={width}
+          />
+        )
+      default:
+        return null
     }
   }
 
-  return result.slice(0, count)
-}
-
-const defaultValueFormatter = (value: number) => {
-  return value.toString()
-}
-
-// Chart components
-export function AreaChart({
-  data,
-  index,
-  categories,
-  colors,
-  valueFormatter = defaultValueFormatter,
-  showLegend = true,
-  showXAxis = true,
-  showYAxis = true,
-  showGridLines = true,
-  yAxisWidth = 56,
-  height = 300,
-  className = "",
-}: ChartProps) {
-  const { theme } = useTheme()
-  const isDark = theme === "dark"
-  const chartColors = colors || getDefaultColors(theme, categories.length)
-
   return (
-    <div className={className} style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsAreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          {showGridLines && (
-            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"} />
-          )}
-          {showXAxis && (
-            <XAxis
-              dataKey={index}
-              tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-              axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-            />
-          )}
-          {showYAxis && (
-            <YAxis
-              width={yAxisWidth}
-              tickFormatter={valueFormatter}
-              tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-              axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-            />
-          )}
-          <Tooltip
-            content={({ active, payload, label }) => {
-              if (!active || !payload || payload.length === 0) return null
-
-              return (
-                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                  <div className="font-medium">{label}</div>
-                  {payload.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="font-medium">{item.name}:</span>
-                      <span>{valueFormatter(item.value as number)}</span>
-                    </div>
-                  ))}
-                </div>
-              )
-            }}
-          />
-          {showLegend && <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: "12px" }} />}
-          {categories.map((category, index) => (
-            <Area
-              key={category}
-              type="monotone"
-              dataKey={category}
-              fill={chartColors[index % chartColors.length]}
-              stroke={chartColors[index % chartColors.length]}
-              fillOpacity={0.3}
-              activeDot={{ r: 6 }}
-              strokeWidth={2}
-            />
-          ))}
-        </RechartsAreaChart>
-      </ResponsiveContainer>
+    <div
+      className={`chart-container ${className || ""}`}
+      style={{
+        height: height || 300,
+        width: width || "100%",
+      }}
+    >
+      {renderChart()}
     </div>
   )
 }
 
-export function BarChart({
-  data,
-  index,
-  categories,
-  colors,
-  valueFormatter = defaultValueFormatter,
-  showLegend = true,
-  showXAxis = true,
-  showYAxis = true,
-  showGridLines = true,
-  layout = "horizontal",
-  stack = false,
-  yAxisWidth = 56,
-  height = 300,
-  className = "",
-}: BarChartProps) {
-  const { theme } = useTheme()
-  const isDark = theme === "dark"
-  const chartColors = colors || getDefaultColors(theme, categories.length)
-
-  return (
-    <div className={className} style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsBarChart data={data} layout={layout} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          {showGridLines && (
-            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"} />
-          )}
-          {showXAxis &&
-            (layout === "horizontal" ? (
-              <XAxis
-                dataKey={index}
-                tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-                axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-                tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              />
-            ) : (
-              <XAxis
-                type="number"
-                tickFormatter={valueFormatter}
-                tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-                axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-                tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              />
-            ))}
-          {showYAxis &&
-            (layout === "horizontal" ? (
-              <YAxis
-                width={yAxisWidth}
-                tickFormatter={valueFormatter}
-                tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-                axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-                tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              />
-            ) : (
-              <YAxis
-                dataKey={index}
-                type="category"
-                width={yAxisWidth}
-                tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-                axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-                tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              />
-            ))}
-          <Tooltip
-            content={({ active, payload, label }) => {
-              if (!active || !payload || payload.length === 0) return null
-
-              return (
-                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                  <div className="font-medium">{label}</div>
-                  {payload.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="font-medium">{item.name}:</span>
-                      <span>{valueFormatter(item.value as number)}</span>
-                    </div>
-                  ))}
-                </div>
-              )
-            }}
-          />
-          {showLegend && <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: "12px" }} />}
-          {categories.map((category, index) => (
-            <Bar
-              key={category}
-              dataKey={category}
-              fill={chartColors[index % chartColors.length]}
-              stackId={stack ? "stack" : undefined}
-              radius={[4, 4, 0, 0]}
-            />
-          ))}
-        </RechartsBarChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-export function LineChart({
-  data,
-  index,
-  categories,
-  colors,
-  valueFormatter = defaultValueFormatter,
-  showLegend = true,
-  showXAxis = true,
-  showYAxis = true,
-  showGridLines = true,
-  yAxisWidth = 56,
-  height = 300,
-  className = "",
-}: ChartProps) {
-  const { theme } = useTheme()
-  const isDark = theme === "dark"
-  const chartColors = colors || getDefaultColors(theme, categories.length)
-
-  return (
-    <div className={className} style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsLineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          {showGridLines && (
-            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"} />
-          )}
-          {showXAxis && (
-            <XAxis
-              dataKey={index}
-              tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-              axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-            />
-          )}
-          {showYAxis && (
-            <YAxis
-              width={yAxisWidth}
-              tickFormatter={valueFormatter}
-              tick={{ fill: isDark ? "#a3a3a3" : "#525252" }}
-              axisLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-              tickLine={{ stroke: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}
-            />
-          )}
-          <Tooltip
-            content={({ active, payload, label }) => {
-              if (!active || !payload || payload.length === 0) return null
-
-              return (
-                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                  <div className="font-medium">{label}</div>
-                  {payload.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="font-medium">{item.name}:</span>
-                      <span>{valueFormatter(item.value as number)}</span>
-                    </div>
-                  ))}
-                </div>
-              )
-            }}
-          />
-          {showLegend && <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: "12px" }} />}
-          {categories.map((category, index) => (
-            <Line
-              key={category}
-              type="monotone"
-              dataKey={category}
-              stroke={chartColors[index % chartColors.length]}
-              activeDot={{ r: 6 }}
-              strokeWidth={2}
-            />
-          ))}
-        </RechartsLineChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-export function PieChart({
-  data,
-  category,
-  index,
-  colors,
-  valueFormatter = defaultValueFormatter,
-  showLegend = true,
-  height = 300,
-  className = "",
-}: PieChartProps) {
-  const { theme } = useTheme()
-  const isDark = theme === "dark"
-  const chartColors = colors || getDefaultColors(theme, data.length)
-
-  return (
-    <div className={className} style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsPieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-          <Pie
-            data={data}
-            dataKey={category}
-            nameKey={index}
-            cx="50%"
-            cy="50%"
-            outerRadius={80}
-            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-            labelLine={true}
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload || payload.length === 0) return null
-
-              const data = payload[0]
-              return (
-                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: data.color }} />
-                    <span className="font-medium">{data.name}:</span>
-                    <span>{valueFormatter(data.value as number)}</span>
-                  </div>
-                </div>
-              )
-            }}
-          />
-          {showLegend && <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: "12px" }} />}
-        </RechartsPieChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-// Chart tooltip component for custom tooltips
-export function ChartTooltip({
-  active,
-  payload,
-  label,
-  valueFormatter = defaultValueFormatter,
-  children,
-}: {
-  active?: boolean
-  payload?: any[]
-  label?: string
-  valueFormatter?: (value: number) => string
-  children?: React.ReactNode
-}) {
-  if (!active || !payload || payload.length === 0) return null
-
-  if (children) {
-    return <div className="rounded-lg border bg-background p-2 shadow-sm">{children}</div>
-  }
-
-  return (
-    <div className="rounded-lg border bg-background p-2 shadow-sm">
-      <div className="font-medium">{label}</div>
-      {payload.map((item, index) => (
-        <div key={index} className="flex items-center gap-2 text-sm">
-          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-          <span className="font-medium">{item.name}:</span>
-          <span>{valueFormatter(item.value as number)}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-export function ResponsiveContainerComponent({
-  children,
-  width = "100%",
-  height = "100%",
-}: {
-  children: React.ReactNode
-  width?: string | number
-  height?: string | number
-}) {
-  return (
-    <div style={{ width, height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        {children}
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
+// Export the Chart component
+export default Chart
 
